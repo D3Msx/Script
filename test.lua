@@ -1,1 +1,1 @@
-# skeet-scriptskl
+print("Hi")
