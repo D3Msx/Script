@@ -1,0 +1,226 @@
+local Finity = loadstring(game:HttpGet("https://pastebin.com/raw/y4eeFHp0"))()
+
+local FinityWindow = Finity.new(true)
+FinityWindow.ChangeToggleKey(Enum.KeyCode.RightControl)
+
+local FinityCategory = FinityWindow:Category("Whitelist")
+local Whitelist = FinityCategory:Sector("Login")
+Whitelist:Cheat("Textbox", ">", function(Value)
+	print("Textbox value changed:", Value)
+end, {
+	placeholder = "Login"
+})
+Whitelist:Cheat("Textbox", "-", function(Value)
+	print("Textbox value changed:", Value)
+end, {
+	placeholder = "Password"
+})
+Whitelist:Cheat("Button", "Whitelist", function()
+	print("Button pressed")
+end)
+
+local buttons = game:GetService("CoreGui").FinityUI.Container.Categories.Whitelist.L.Login.Container.Whitelist.Container.Button
+	local plr = game.Players.LocalPlayer
+	local hum = plr.Character.HumanoidRootPart
+	local guiopen = true
+	local superbeesspeed = false
+	local lg = false
+	
+	local t = {}
+	
+	local accounts = {
+		["vinorix725"] = {"123", "123"}
+		["ilya_3ka"] = {"Илюша", "илья2004"}
+	}
+	local sumbits = 0
+	
+	if accounts[string.lower(plr.Name)] then
+		wait()
+	else
+		plr:Kick("You dont have whitelist.")
+	end
+    
+    game:GetService("CoreGui").FinityUI.Container.Categories.Whitelist.L.Login.Container.Whitelist.Container.Button.MouseButton1Click:Connect(function()
+		local login = game:GetService("CoreGui").FinityUI.Container.Categories.Whitelist.L.Login.Container[">"].Container.Textbox
+		local password = game:GetService("CoreGui").FinityUI.Container.Categories.Whitelist.L.Login.Container["-"].Container.Textbox
+		if accounts[string.lower(plr.Name)] then
+			if password.Text == accounts[string.lower(plr.Name)][2] then
+				game:GetService("CoreGui").FinityUI.Container.Categories.Whitelist.L.Login.Container.Whitelist.Container.Button.Text = "Successfully!"
+				wait(0.4)
+				game:GetService("CoreGui").FinityUI:Destroy()
+				lg = true
+			else
+				sumbits = sumbits + 1
+				if sumbits >= 2 then
+					game.Players.LocalPlayer:Kick("Lol")
+				end
+			end
+		end
+	end)
+	
+	repeat
+		wait()
+    until lg == true
+
+--UI Library
+local Finity = loadstring(game:HttpGet("https://pastebin.com/raw/y4eeFHp0"))()
+--Misc
+local FinityWindow = Finity.new(true)
+FinityWindow.ChangeToggleKey(Enum.KeyCode.RightControl)
+
+--Stuff
+
+local FinityCategory = FinityWindow:Category("Main")
+local AutoEgg = FinityCategory:Sector("AutoEgg")
+
+local ae = false
+AutoEgg:Cheat("Toggle", "x1", function()
+    if ae == false then
+        ae = true
+        while ae do
+            wait()
+        local A_1 = "PurchaseEgg"
+        local A_2 = shared.eggs
+        local Event = game:GetService("ReplicatedStorage").NetworkRemoteEvent
+        Event:FireServer(A_1, A_2)
+        end
+    else
+        ae = false
+    end
+end)
+
+local ae = false
+AutoEgg:Cheat("Toggle", "x3", function()
+    if ae == false then
+        ae = true
+        while ae do
+            wait()
+        local A_1 = "PurchaseEgg"
+		local A_2 = shared.eggs
+		local A_3 = "Multi"
+        local Event = game:GetService("ReplicatedStorage").NetworkRemoteEvent
+        Event:FireServer(A_1, A_2, A_3)
+        end
+    else
+        ae = false
+    end
+end)
+
+AutoEgg:Cheat("Textbox", ">", function(Value)
+    shared.eggs = Value
+end, {
+    placeholder = "Egg Name"
+})
+local Finity = loadstring(game:HttpGet("https://pastebin.com/raw/y4eeFHp0"))()
+
+local FinityWindow = Finity.new(true)
+FinityWindow.ChangeToggleKey(Enum.KeyCode.RightControl)
+
+local FinityCategory = FinityWindow:Category("Whitelist")
+local Whitelist = FinityCategory:Sector("Login")
+Whitelist:Cheat("Textbox", ">", function(Value)
+	print("Textbox value changed:", Value)
+end, {
+	placeholder = "Login"
+})
+Whitelist:Cheat("Textbox", "-", function(Value)
+	print("Textbox value changed:", Value)
+end, {
+	placeholder = "Password"
+})
+Whitelist:Cheat("Button", "Whitelist", function()
+	print("Button pressed")
+end)
+
+local buttons = game:GetService("CoreGui").FinityUI.Container.Categories.Whitelist.L.Login.Container.Whitelist.Container.Button
+	local plr = game.Players.LocalPlayer
+	local hum = plr.Character.HumanoidRootPart
+	local guiopen = true
+	local superbeesspeed = false
+	local lg = false
+	
+	local t = {}
+	
+	local accounts = {
+		["vinorix725"] = {"123", "123"}
+		["ilya_3ka"] = {"Илюша", "илья2004"}
+	}
+	local sumbits = 0
+	
+	if accounts[string.lower(plr.Name)] then
+		wait()
+	else
+		plr:Kick("You dont have whitelist.")
+	end
+    
+    game:GetService("CoreGui").FinityUI.Container.Categories.Whitelist.L.Login.Container.Whitelist.Container.Button.MouseButton1Click:Connect(function()
+		local login = game:GetService("CoreGui").FinityUI.Container.Categories.Whitelist.L.Login.Container[">"].Container.Textbox
+		local password = game:GetService("CoreGui").FinityUI.Container.Categories.Whitelist.L.Login.Container["-"].Container.Textbox
+		if accounts[string.lower(plr.Name)] then
+			if password.Text == accounts[string.lower(plr.Name)][2] then
+				game:GetService("CoreGui").FinityUI.Container.Categories.Whitelist.L.Login.Container.Whitelist.Container.Button.Text = "Successfully!"
+				wait(0.4)
+				game:GetService("CoreGui").FinityUI:Destroy()
+				lg = true
+			else
+				sumbits = sumbits + 1
+				if sumbits >= 2 then
+					game.Players.LocalPlayer:Kick("Lol")
+				end
+			end
+		end
+	end)
+	
+	repeat
+		wait()
+    until lg == true
+
+--UI Library
+local Finity = loadstring(game:HttpGet("https://pastebin.com/raw/y4eeFHp0"))()
+--Misc
+local FinityWindow = Finity.new(true)
+FinityWindow.ChangeToggleKey(Enum.KeyCode.RightControl)
+
+--Stuff
+
+local FinityCategory = FinityWindow:Category("Main")
+local AutoEgg = FinityCategory:Sector("AutoEgg")
+
+local ae = false
+AutoEgg:Cheat("Toggle", "x1", function()
+    if ae == false then
+        ae = true
+        while ae do
+            wait()
+        local A_1 = "PurchaseEgg"
+        local A_2 = shared.eggs
+        local Event = game:GetService("ReplicatedStorage").NetworkRemoteEvent
+        Event:FireServer(A_1, A_2)
+        end
+    else
+        ae = false
+    end
+end)
+
+local ae = false
+AutoEgg:Cheat("Toggle", "x3", function()
+    if ae == false then
+        ae = true
+        while ae do
+            wait()
+        local A_1 = "PurchaseEgg"
+		local A_2 = shared.eggs
+		local A_3 = "Multi"
+        local Event = game:GetService("ReplicatedStorage").NetworkRemoteEvent
+        Event:FireServer(A_1, A_2, A_3)
+        end
+    else
+        ae = false
+    end
+end)
+
+AutoEgg:Cheat("Textbox", ">", function(Value)
+    shared.eggs = Value
+end, {
+    placeholder = "Egg Name"
+})
