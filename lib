@@ -1,0 +1,1190 @@
+-- Finity-inspired GUI builder for Roblox
+-- Place this LocalScript in StarterPlayer > StarterPlayerScripts.
+-- The GUI starts empty. Add your own categories and controls in the marked block below.
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+if not player then
+	return
+end
+
+local playerGui = player:WaitForChild("PlayerGui")
+
+--// SETTINGS
+
+local GUI_NAME = "FinityGuiBuilder"
+local WINDOW_TITLE = "FINITY GUI"
+local USE_DARK_THEME = true
+local DEFAULT_TOGGLE_KEY = Enum.KeyCode.Home
+
+--// THEMES
+
+local Themes = {
+	Dark = {
+		Window = Color3.fromRGB(31, 31, 34),
+		Topbar = Color3.fromRGB(37, 37, 41),
+		Sidebar = Color3.fromRGB(34, 34, 37),
+		Section = Color3.fromRGB(40, 40, 44),
+		Control = Color3.fromRGB(53, 53, 58),
+		ControlHover = Color3.fromRGB(67, 67, 73),
+		ControlDown = Color3.fromRGB(45, 45, 50),
+		Separator = Color3.fromRGB(67, 67, 73),
+		Text = Color3.fromRGB(224, 224, 228),
+		MutedText = Color3.fromRGB(157, 157, 165),
+		Accent = Color3.fromRGB(116, 222, 114),
+		AccentDark = Color3.fromRGB(79, 171, 79),
+		Track = Color3.fromRGB(82, 82, 89),
+		Knob = Color3.fromRGB(239, 239, 242),
+		Danger = Color3.fromRGB(235, 94, 94),
+	},
+	Light = {
+		Window = Color3.fromRGB(249, 249, 252),
+		Topbar = Color3.fromRGB(247, 247, 250),
+		Sidebar = Color3.fromRGB(244, 244, 248),
+		Section = Color3.fromRGB(252, 252, 255),
+		Control = Color3.fromRGB(222, 219, 226),
+		ControlHover = Color3.fromRGB(211, 208, 216),
+		ControlDown = Color3.fromRGB(193, 190, 199),
+		Separator = Color3.fromRGB(221, 218, 226),
+		Text = Color3.fromRGB(83, 83, 90),
+		MutedText = Color3.fromRGB(126, 126, 134),
+		Accent = Color3.fromRGB(104, 205, 102),
+		AccentDark = Color3.fromRGB(72, 157, 71),
+		Track = Color3.fromRGB(193, 190, 199),
+		Knob = Color3.fromRGB(255, 255, 255),
+		Danger = Color3.fromRGB(218, 78, 78),
+	},
+}
+
+local Theme = USE_DARK_THEME and Themes.Dark or Themes.Light
+
+--// HELPERS
+
+local connections = {}
+
+local function create(className, properties)
+	local object = Instance.new(className)
+	for property, value in pairs(properties or {}) do
+		object[property] = value
+	end
+	return object
+end
+
+local function corner(object, radius)
+	return create("UICorner", {
+		CornerRadius = UDim.new(0, radius),
+		Parent = object,
+	})
+end
+
+local function stroke(object, color, transparency)
+	return create("UIStroke", {
+		Color = color,
+		Transparency = transparency or 0,
+		Thickness = 1,
+		Parent = object,
+	})
+end
+
+local function tween(object, duration, properties)
+	local animation = TweenService:Create(
+		object,
+		TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		properties
+	)
+	animation:Play()
+	return animation
+end
+
+local function connect(signal, callback)
+	local connection = signal:Connect(callback)
+	table.insert(connections, connection)
+	return connection
+end
+
+local function bindHover(button, normalColor, hoverColor, downColor)
+	connect(button.MouseEnter, function()
+		tween(button, 0.14, { BackgroundColor3 = hoverColor })
+	end)
+
+	connect(button.MouseLeave, function()
+		tween(button, 0.14, { BackgroundColor3 = normalColor })
+	end)
+
+	connect(button.MouseButton1Down, function()
+		tween(button, 0.08, { BackgroundColor3 = downColor or normalColor })
+	end)
+
+	connect(button.MouseButton1Up, function()
+		tween(button, 0.1, { BackgroundColor3 = hoverColor })
+	end)
+end
+
+local oldGui = playerGui:FindFirstChild(GUI_NAME)
+if oldGui then
+	oldGui:Destroy()
+end
+
+--// WINDOW
+
+local screenGui = create("ScreenGui", {
+	Name = GUI_NAME,
+	DisplayOrder = 50,
+	IgnoreGuiInset = false,
+	ResetOnSpawn = false,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+	Parent = playerGui,
+})
+
+local window = create("Frame", {
+	Name = "Window",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.fromOffset(700, 420),
+	BackgroundColor3 = Theme.Window,
+	BorderSizePixel = 0,
+	ClipsDescendants = false,
+	Active = true,
+	Parent = screenGui,
+})
+corner(window, 9)
+stroke(window, Theme.Separator, 0.15)
+
+create("ImageLabel", {
+	Name = "Shadow",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.new(0.5, 0, 0.5, 7),
+	Size = UDim2.new(1, 30, 1, 30),
+	BackgroundTransparency = 1,
+	Image = "rbxassetid://1316045217",
+	ImageColor3 = Color3.fromRGB(0, 0, 0),
+	ImageTransparency = 0.55,
+	ScaleType = Enum.ScaleType.Slice,
+	SliceCenter = Rect.new(10, 10, 118, 118),
+	ZIndex = 0,
+	Parent = window,
+})
+
+local uiScale = create("UIScale", {
+	Scale = 1,
+	Parent = window,
+})
+
+local function updateScale()
+	local camera = workspace.CurrentCamera
+	if not camera then
+		return
+	end
+
+	local viewport = camera.ViewportSize
+	uiScale.Scale = math.min(1, (viewport.X - 28) / 700, (viewport.Y - 28) / 420)
+end
+
+updateScale()
+if workspace.CurrentCamera then
+	connect(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"), updateScale)
+end
+
+local topbar = create("Frame", {
+	Name = "Topbar",
+	Size = UDim2.new(1, 0, 0, 38),
+	BackgroundColor3 = Theme.Topbar,
+	BorderSizePixel = 0,
+	Active = true,
+	ZIndex = 4,
+	Parent = window,
+})
+corner(topbar, 9)
+
+create("Frame", {
+	Name = "SquareBottom",
+	Position = UDim2.new(0, 0, 1, -9),
+	Size = UDim2.new(1, 0, 0, 9),
+	BackgroundColor3 = Theme.Topbar,
+	BorderSizePixel = 0,
+	ZIndex = 4,
+	Parent = topbar,
+})
+
+local logo = create("Frame", {
+	Name = "Logo",
+	Position = UDim2.fromOffset(13, 11),
+	Size = UDim2.fromOffset(16, 16),
+	BackgroundColor3 = Theme.Accent,
+	BorderSizePixel = 0,
+	ZIndex = 5,
+	Parent = topbar,
+})
+corner(logo, 4)
+
+local titleLabel = create("TextLabel", {
+	Name = "Title",
+	Position = UDim2.fromOffset(39, 0),
+	Size = UDim2.new(1, -205, 1, 0),
+	BackgroundTransparency = 1,
+	Font = Enum.Font.GothamBold,
+	Text = WINDOW_TITLE,
+	TextColor3 = Theme.Text,
+	TextSize = 13,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 5,
+	Parent = topbar,
+})
+
+local shortcutLabel = create("TextLabel", {
+	Name = "Shortcut",
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, -77, 0, 0),
+	Size = UDim2.fromOffset(112, 38),
+	BackgroundTransparency = 1,
+	Font = Enum.Font.GothamMedium,
+	Text = "HOME  ·  HIDE",
+	TextColor3 = Theme.MutedText,
+	TextSize = 10,
+	TextXAlignment = Enum.TextXAlignment.Right,
+	ZIndex = 5,
+	Parent = topbar,
+})
+
+local minimizeButton = create("TextButton", {
+	Name = "Minimize",
+	AnchorPoint = Vector2.new(1, 0.5),
+	Position = UDim2.new(1, -39, 0.5, 0),
+	Size = UDim2.fromOffset(30, 30),
+	BackgroundTransparency = 1,
+	AutoButtonColor = false,
+	Font = Enum.Font.GothamBold,
+	Text = "–",
+	TextColor3 = Theme.MutedText,
+	TextSize = 17,
+	ZIndex = 6,
+	Parent = topbar,
+})
+corner(minimizeButton, 6)
+
+local closeButton = create("TextButton", {
+	Name = "Close",
+	AnchorPoint = Vector2.new(1, 0.5),
+	Position = UDim2.new(1, -7, 0.5, 0),
+	Size = UDim2.fromOffset(30, 30),
+	BackgroundTransparency = 1,
+	AutoButtonColor = false,
+	Font = Enum.Font.GothamBold,
+	Text = "×",
+	TextColor3 = Theme.MutedText,
+	TextSize = 17,
+	ZIndex = 6,
+	Parent = topbar,
+})
+corner(closeButton, 6)
+
+create("Frame", {
+	Name = "TopSeparator",
+	Position = UDim2.new(0, 0, 0, 38),
+	Size = UDim2.new(1, 0, 0, 1),
+	BackgroundColor3 = Theme.Separator,
+	BorderSizePixel = 0,
+	ZIndex = 4,
+	Parent = window,
+})
+
+local sidebar = create("Frame", {
+	Name = "Sidebar",
+	Position = UDim2.fromOffset(0, 39),
+	Size = UDim2.new(0, 142, 1, -39),
+	BackgroundColor3 = Theme.Sidebar,
+	BorderSizePixel = 0,
+	ZIndex = 2,
+	Parent = window,
+})
+corner(sidebar, 9)
+
+create("Frame", {
+	Name = "SquareRight",
+	AnchorPoint = Vector2.new(1, 0),
+	Position = UDim2.new(1, 0, 0, 0),
+	Size = UDim2.new(0, 9, 1, 0),
+	BackgroundColor3 = Theme.Sidebar,
+	BorderSizePixel = 0,
+	ZIndex = 2,
+	Parent = sidebar,
+})
+
+create("Frame", {
+	Name = "SidebarSeparator",
+	Position = UDim2.new(1, 0, 0, 0),
+	Size = UDim2.new(0, 1, 1, 0),
+	BackgroundColor3 = Theme.Separator,
+	BorderSizePixel = 0,
+	ZIndex = 3,
+	Parent = sidebar,
+})
+
+create("TextLabel", {
+	Name = "MenuLabel",
+	Position = UDim2.fromOffset(14, 15),
+	Size = UDim2.new(1, -28, 0, 18),
+	BackgroundTransparency = 1,
+	Font = Enum.Font.GothamBold,
+	Text = "CATEGORIES",
+	TextColor3 = Theme.MutedText,
+	TextSize = 9,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	ZIndex = 4,
+	Parent = sidebar,
+})
+
+local tabList = create("ScrollingFrame", {
+	Name = "CategoryList",
+	Position = UDim2.fromOffset(9, 42),
+	Size = UDim2.new(1, -18, 1, -53),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	CanvasSize = UDim2.fromOffset(0, 0),
+	AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	ScrollBarThickness = 2,
+	ScrollBarImageColor3 = Theme.MutedText,
+	ZIndex = 3,
+	Parent = sidebar,
+})
+
+create("UIListLayout", {
+	Padding = UDim.new(0, 7),
+	SortOrder = Enum.SortOrder.LayoutOrder,
+	Parent = tabList,
+})
+
+local pages = create("Frame", {
+	Name = "Pages",
+	Position = UDim2.fromOffset(143, 39),
+	Size = UDim2.new(1, -143, 1, -39),
+	BackgroundTransparency = 1,
+	BorderSizePixel = 0,
+	ClipsDescendants = true,
+	ZIndex = 2,
+	Parent = window,
+})
+
+local emptyState = create("TextLabel", {
+	Name = "EmptyState",
+	AnchorPoint = Vector2.new(0.5, 0.5),
+	Position = UDim2.fromScale(0.5, 0.5),
+	Size = UDim2.new(1, -60, 0, 70),
+	BackgroundTransparency = 1,
+	Font = Enum.Font.GothamMedium,
+	Text = "GUI IS EMPTY\nAdd categories in the code block at the bottom",
+	TextColor3 = Theme.MutedText,
+	TextSize = 12,
+	TextWrapped = true,
+	ZIndex = 3,
+	Parent = pages,
+})
+
+--// CONTROL BUILDERS
+
+local function addLabel(parent, text)
+	return create("TextLabel", {
+		Name = "Label",
+		Size = UDim2.new(1, 0, 0, 32),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamMedium,
+		Text = tostring(text),
+		TextColor3 = Theme.MutedText,
+		TextSize = 11,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 5,
+		Parent = parent,
+	})
+end
+
+local function addButton(parent, text, callback)
+	local button = create("TextButton", {
+		Name = tostring(text):gsub("%s+", "") .. "Button",
+		Size = UDim2.new(1, 0, 0, 38),
+		BackgroundColor3 = Theme.Control,
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Font = Enum.Font.GothamBold,
+		Text = tostring(text),
+		TextColor3 = Theme.Text,
+		TextSize = 11,
+		ZIndex = 5,
+		Parent = parent,
+	})
+	corner(button, 6)
+	bindHover(button, Theme.Control, Theme.ControlHover, Theme.ControlDown)
+
+	connect(button.MouseButton1Click, function()
+		if callback then
+			task.spawn(callback)
+		end
+	end)
+
+	return button
+end
+
+
+local function addToggle(parent, text, defaultValue, callback)
+	local value = defaultValue == true
+
+	local row = create("TextButton", {
+		Name = tostring(text):gsub("%s+", "") .. "Toggle",
+		Size = UDim2.new(1, 0, 0, 40),
+		BackgroundColor3 = Theme.Control,
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Font = Enum.Font.GothamBold,
+		Text = "   " .. tostring(text),
+		TextColor3 = Theme.Text,
+		TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 5,
+		Parent = parent,
+	})
+	corner(row, 6)
+
+	local track = create("Frame", {
+		Name = "Track",
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.fromOffset(36, 20),
+		BackgroundColor3 = value and Theme.Accent or Theme.Track,
+		BorderSizePixel = 0,
+		ZIndex = 6,
+		Parent = row,
+	})
+	corner(track, 10)
+
+	local knob = create("Frame", {
+		Name = "Knob",
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = value and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
+		Size = UDim2.fromOffset(16, 16),
+		BackgroundColor3 = Theme.Knob,
+		BorderSizePixel = 0,
+		ZIndex = 7,
+		Parent = track,
+	})
+	corner(knob, 8)
+
+	local control = {}
+
+	local function render(animate)
+		local targetColor = value and Theme.Accent or Theme.Track
+		local targetPosition = value and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)
+
+		if animate then
+			tween(track, 0.18, { BackgroundColor3 = targetColor })
+			tween(knob, 0.18, { Position = targetPosition })
+		else
+			track.BackgroundColor3 = targetColor
+			knob.Position = targetPosition
+		end
+	end
+
+	function control:Get()
+		return value
+	end
+
+	function control:Set(newValue, fireCallback)
+		value = newValue == true
+		render(true)
+
+		if fireCallback ~= false and callback then
+			task.spawn(callback, value)
+		end
+	end
+
+	bindHover(row, Theme.Control, Theme.ControlHover, Theme.ControlDown)
+	connect(row.MouseButton1Click, function()
+		control:Set(not value, true)
+	end)
+
+	control.Instance = row
+	return control
+end
+
+local function addSlider(parent, text, minimum, maximum, defaultValue, callback)
+	assert(type(minimum) == "number" and type(maximum) == "number", "Slider limits must be numbers")
+	assert(maximum > minimum, "Slider maximum must be greater than minimum")
+
+	local value = math.clamp(tonumber(defaultValue) or minimum, minimum, maximum)
+	local dragging = false
+	local hovering = false
+
+	local holder = create("Frame", {
+		Name = tostring(text):gsub("%s+", "") .. "Slider",
+		Size = UDim2.new(1, 0, 0, 66),
+		BackgroundColor3 = Theme.Control,
+		BorderSizePixel = 0,
+		ZIndex = 5,
+		Parent = parent,
+	})
+	corner(holder, 6)
+
+	create("TextLabel", {
+		Name = "Label",
+		Position = UDim2.fromOffset(11, 7),
+		Size = UDim2.new(1, -70, 0, 20),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamBold,
+		Text = tostring(text),
+		TextColor3 = Theme.Text,
+		TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 6,
+		Parent = holder,
+	})
+
+	local valueLabel = create("TextLabel", {
+		Name = "Value",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -11, 0, 7),
+		Size = UDim2.fromOffset(50, 20),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamBold,
+		Text = tostring(value),
+		TextColor3 = Theme.Accent,
+		TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		ZIndex = 6,
+		Parent = holder,
+	})
+
+	local bar = create("TextButton", {
+		Name = "Bar",
+		Position = UDim2.fromOffset(11, 42),
+		Size = UDim2.new(1, -22, 0, 8),
+		BackgroundColor3 = Theme.Track,
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Text = "",
+		ZIndex = 6,
+		Parent = holder,
+	})
+	corner(bar, 4)
+
+	local fill = create("Frame", {
+		Name = "Fill",
+		Size = UDim2.fromScale(0, 1),
+		BackgroundColor3 = Theme.Accent,
+		BorderSizePixel = 0,
+		ZIndex = 7,
+		Parent = bar,
+	})
+	corner(fill, 4)
+
+	local knob = create("Frame", {
+		Name = "Knob",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0, 0.5),
+		Size = UDim2.fromOffset(14, 14),
+		BackgroundColor3 = Theme.Knob,
+		BorderSizePixel = 0,
+		ZIndex = 8,
+		Parent = bar,
+	})
+	corner(knob, 7)
+	stroke(knob, Theme.AccentDark, 0.25)
+
+	local tooltip = create("TextLabel", {
+		Name = "Tooltip",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0, 11, 0, 35),
+		Size = UDim2.fromOffset(116, 32),
+		BackgroundColor3 = Theme.Topbar,
+		BackgroundTransparency = 0.14,
+		BorderSizePixel = 0,
+		Font = Enum.Font.GothamBold,
+		Text = "",
+		TextColor3 = Theme.Text,
+		TextSize = 10,
+		TextTransparency = 1,
+		Visible = false,
+		ZIndex = 20,
+		Parent = holder,
+	})
+	corner(tooltip, 6)
+	stroke(tooltip, Theme.Separator, 0.2)
+
+	local control = {}
+
+	local function render(fireCallback)
+		local alpha = (value - minimum) / (maximum - minimum)
+		fill.Size = UDim2.fromScale(alpha, 1)
+		knob.Position = UDim2.fromScale(alpha, 0.5)
+		valueLabel.Text = tostring(value)
+		tooltip.Position = UDim2.new(alpha, 11 - (22 * alpha), 0, 35)
+		tooltip.Text = string.format("%s: %d", tostring(text), value)
+
+		if fireCallback and callback then
+			task.spawn(callback, value)
+		end
+	end
+
+	local function setFromX(x)
+		local alpha = math.clamp((x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+		local nextValue = math.floor(minimum + ((maximum - minimum) * alpha) + 0.5)
+		if nextValue ~= value then
+			value = nextValue
+			render(true)
+		end
+	end
+
+	local function showTooltip()
+		hovering = true
+		tooltip.Visible = true
+		tween(tooltip, 0.12, { TextTransparency = 0 })
+	end
+
+	local function hideTooltip()
+		hovering = false
+		if dragging then
+			return
+		end
+
+		local animation = tween(tooltip, 0.12, { TextTransparency = 1 })
+		animation.Completed:Once(function()
+			if not hovering and not dragging then
+				tooltip.Visible = false
+			end
+		end)
+	end
+
+	connect(holder.MouseEnter, showTooltip)
+	connect(holder.MouseLeave, hideTooltip)
+
+	connect(bar.InputBegan, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			showTooltip()
+			setFromX(input.Position.X)
+		end
+	end)
+
+	connect(UserInputService.InputChanged, function(input)
+		if not dragging then
+			return
+		end
+
+		if input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch then
+			setFromX(input.Position.X)
+		end
+	end)
+
+	connect(UserInputService.InputEnded, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+			if not hovering then
+				hideTooltip()
+			end
+		end
+	end)
+
+	function control:Get()
+		return value
+	end
+
+	function control:Set(newValue, fireCallback)
+		value = math.clamp(math.floor((tonumber(newValue) or minimum) + 0.5), minimum, maximum)
+		render(fireCallback ~= false)
+	end
+
+	control.Instance = holder
+	render(false)
+	return control
+end
+
+--// PUBLIC GUI API
+
+local UI = {
+	Categories = {},
+	ActiveCategory = nil,
+	ScreenGui = screenGui,
+	Window = window,
+	ToggleKey = DEFAULT_TOGGLE_KEY,
+}
+
+local menuOpen = true
+local windowPosition = window.Position
+local transitionId = 0
+
+local function setMenuOpen(open)
+	if menuOpen == open then
+		return
+	end
+
+	menuOpen = open
+	transitionId += 1
+	local currentTransition = transitionId
+
+	if open then
+		window.Visible = true
+		window.Position = UDim2.new(windowPosition.X.Scale, windowPosition.X.Offset, 1.25, 0)
+		tween(window, 0.32, { Position = windowPosition })
+	else
+		windowPosition = window.Position
+		local animation = tween(window, 0.28, {
+			Position = UDim2.new(window.Position.X.Scale, window.Position.X.Offset, 1.25, 0),
+		})
+		animation.Completed:Once(function()
+			if currentTransition == transitionId and not menuOpen then
+				window.Visible = false
+			end
+		end)
+	end
+end
+
+function UI:Show()
+	setMenuOpen(true)
+end
+
+function UI:Hide()
+	setMenuOpen(false)
+end
+
+function UI:Toggle()
+	setMenuOpen(not menuOpen)
+end
+
+function UI:SetTitle(text)
+	titleLabel.Text = tostring(text)
+end
+
+function UI:SetToggleKey(keyCode)
+	assert(typeof(keyCode) == "EnumItem", "SetToggleKey expects an Enum.KeyCode value")
+	self.ToggleKey = keyCode
+	shortcutLabel.Text = string.upper(keyCode.Name) .. "  ·  HIDE"
+end
+
+function UI:Destroy()
+	for _, connection in ipairs(connections) do
+		connection:Disconnect()
+	end
+	table.clear(connections)
+
+	if screenGui.Parent then
+		screenGui:Destroy()
+	end
+end
+
+function UI:SelectCategory(category)
+	if self.ActiveCategory == category then
+		return
+	end
+
+	self.ActiveCategory = category
+
+	for _, item in ipairs(self.Categories) do
+		local active = item == category
+		item.Page.Visible = active
+		item.Indicator.Visible = active
+		item.Button.TextColor3 = active and Theme.Text or Theme.MutedText
+		tween(item.Button, 0.16, {
+			BackgroundTransparency = active and 0.2 or 1,
+			BackgroundColor3 = active and Theme.Control or Theme.Sidebar,
+		})
+	end
+end
+
+function UI:AddCategory(name)
+	assert(type(name) == "string" and name ~= "", "Category name must be a non-empty string")
+
+	for _, existing in ipairs(self.Categories) do
+		assert(existing.Name ~= name, "Category already exists: " .. name)
+	end
+
+	emptyState.Visible = false
+
+	local category = {
+		Name = name,
+		Sections = {},
+	}
+
+	local button = create("TextButton", {
+		Name = name:gsub("%s+", "") .. "Category",
+		Size = UDim2.new(1, 0, 0, 35),
+		BackgroundColor3 = Theme.Sidebar,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Font = Enum.Font.GothamBold,
+		Text = "   " .. name,
+		TextColor3 = Theme.MutedText,
+		TextSize = 12,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 4,
+		Parent = tabList,
+	})
+	corner(button, 6)
+
+	local indicator = create("Frame", {
+		Name = "ActiveIndicator",
+		Position = UDim2.fromOffset(0, 7),
+		Size = UDim2.fromOffset(3, 21),
+		BackgroundColor3 = Theme.Accent,
+		BorderSizePixel = 0,
+		Visible = false,
+		ZIndex = 5,
+		Parent = button,
+	})
+	corner(indicator, 2)
+
+	local page = create("ScrollingFrame", {
+		Name = name:gsub("%s+", "") .. "Page",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		CanvasSize = UDim2.fromOffset(0, 0),
+		ScrollBarThickness = 3,
+		ScrollBarImageColor3 = Theme.MutedText,
+		ScrollBarImageTransparency = 0.35,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		Visible = false,
+		ZIndex = 2,
+		Parent = pages,
+	})
+
+	create("TextLabel", {
+		Name = "PageTitle",
+		Position = UDim2.fromOffset(19, 14),
+		Size = UDim2.new(1, -38, 0, 26),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamBold,
+		Text = name,
+		TextColor3 = Theme.Text,
+		TextSize = 18,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 3,
+		Parent = page,
+	})
+
+	create("TextLabel", {
+		Name = "Subtitle",
+		Position = UDim2.fromOffset(19, 39),
+		Size = UDim2.new(1, -38, 0, 18),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.Gotham,
+		Text = "Custom controls",
+		TextColor3 = Theme.MutedText,
+		TextSize = 10,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 3,
+		Parent = page,
+	})
+
+	local leftColumn = create("Frame", {
+		Name = "LeftColumn",
+		Position = UDim2.fromOffset(19, 69),
+		Size = UDim2.new(0.5, -27, 0, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 2,
+		Parent = page,
+	})
+
+	local rightColumn = create("Frame", {
+		Name = "RightColumn",
+		Position = UDim2.new(0.5, 7, 0, 69),
+		Size = UDim2.new(0.5, -26, 0, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 2,
+		Parent = page,
+	})
+
+	local leftLayout = create("UIListLayout", {
+		Padding = UDim.new(0, 12),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = leftColumn,
+	})
+
+	local rightLayout = create("UIListLayout", {
+		Padding = UDim.new(0, 12),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = rightColumn,
+	})
+
+	local function refreshCanvas()
+		local height = math.max(leftLayout.AbsoluteContentSize.Y, rightLayout.AbsoluteContentSize.Y)
+		page.CanvasSize = UDim2.fromOffset(0, 69 + height + 20)
+		leftColumn.Size = UDim2.new(leftColumn.Size.X.Scale, leftColumn.Size.X.Offset, 0, height)
+		rightColumn.Size = UDim2.new(rightColumn.Size.X.Scale, rightColumn.Size.X.Offset, 0, height)
+	end
+
+	connect(leftLayout:GetPropertyChangedSignal("AbsoluteContentSize"), refreshCanvas)
+	connect(rightLayout:GetPropertyChangedSignal("AbsoluteContentSize"), refreshCanvas)
+
+	category.Button = button
+	category.Indicator = indicator
+	category.Page = page
+	category.LeftColumn = leftColumn
+	category.RightColumn = rightColumn
+	category.RefreshCanvas = refreshCanvas
+
+	function category:Select()
+		UI:SelectCategory(self)
+	end
+
+	function category:AddSection(sectionName, column)
+		assert(type(sectionName) == "string" and sectionName ~= "", "Section name must be a non-empty string")
+
+		local side = string.lower(tostring(column or "Left"))
+		local parent = side == "right" and self.RightColumn or self.LeftColumn
+
+		local sectionFrame = create("Frame", {
+			Name = sectionName:gsub("%s+", "") .. "Section",
+			Size = UDim2.new(1, 0, 0, 54),
+			BackgroundColor3 = Theme.Section,
+			BorderSizePixel = 0,
+			ClipsDescendants = false,
+			ZIndex = 3,
+			Parent = parent,
+		})
+		corner(sectionFrame, 7)
+		stroke(sectionFrame, Theme.Separator, 0.45)
+
+		create("TextLabel", {
+			Name = "Title",
+			Position = UDim2.fromOffset(13, 10),
+			Size = UDim2.new(1, -26, 0, 21),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.GothamBold,
+			Text = sectionName,
+			TextColor3 = Theme.Text,
+			TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			ZIndex = 4,
+			Parent = sectionFrame,
+		})
+
+		create("Frame", {
+			Name = "Separator",
+			Position = UDim2.fromOffset(13, 37),
+			Size = UDim2.new(1, -26, 0, 1),
+			BackgroundColor3 = Theme.Separator,
+			BackgroundTransparency = 0.25,
+			BorderSizePixel = 0,
+			ZIndex = 4,
+			Parent = sectionFrame,
+		})
+
+		local content = create("Frame", {
+			Name = "Content",
+			Position = UDim2.fromOffset(10, 47),
+			Size = UDim2.new(1, -20, 0, 0),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 4,
+			Parent = sectionFrame,
+		})
+
+		local layout = create("UIListLayout", {
+			Padding = UDim.new(0, 7),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Parent = content,
+		})
+
+		connect(layout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
+			content.Size = UDim2.new(1, -20, 0, layout.AbsoluteContentSize.Y)
+			sectionFrame.Size = UDim2.new(1, 0, 0, 57 + layout.AbsoluteContentSize.Y)
+			refreshCanvas()
+		end)
+
+		local section = {
+			Name = sectionName,
+			Instance = sectionFrame,
+			Content = content,
+		}
+
+		function section:AddLabel(text)
+			return addLabel(self.Content, text)
+		end
+
+		function section:AddButton(text, callback)
+			return addButton(self.Content, text, callback)
+		end
+
+		function section:AddToggle(text, defaultValue, callback)
+			return addToggle(self.Content, text, defaultValue, callback)
+		end
+
+		function section:AddSlider(text, minimum, maximum, defaultValue, callback)
+			return addSlider(self.Content, text, minimum, maximum, defaultValue, callback)
+		end
+
+		table.insert(self.Sections, section)
+		refreshCanvas()
+		return section
+	end
+
+	connect(button.MouseEnter, function()
+		if UI.ActiveCategory ~= category then
+			tween(button, 0.14, {
+				BackgroundColor3 = Theme.ControlHover,
+				BackgroundTransparency = 0.3,
+				TextColor3 = Theme.Text,
+			})
+		end
+	end)
+
+	connect(button.MouseLeave, function()
+		if UI.ActiveCategory ~= category then
+			tween(button, 0.14, {
+				BackgroundColor3 = Theme.Sidebar,
+				BackgroundTransparency = 1,
+				TextColor3 = Theme.MutedText,
+			})
+		end
+	end)
+
+	connect(button.MouseButton1Click, function()
+		UI:SelectCategory(category)
+	end)
+
+	table.insert(self.Categories, category)
+	if #self.Categories == 1 then
+		self:SelectCategory(category)
+	end
+
+	return category
+end
+
+--// WINDOW INTERACTIONS
+
+connect(minimizeButton.MouseEnter, function()
+	tween(minimizeButton, 0.12, {
+		BackgroundTransparency = 0,
+		BackgroundColor3 = Theme.ControlHover,
+		TextColor3 = Theme.Text,
+	})
+end)
+
+connect(minimizeButton.MouseLeave, function()
+	tween(minimizeButton, 0.12, {
+		BackgroundTransparency = 1,
+		TextColor3 = Theme.MutedText,
+	})
+end)
+
+connect(closeButton.MouseEnter, function()
+	tween(closeButton, 0.12, {
+		BackgroundTransparency = 0,
+		BackgroundColor3 = Theme.Danger,
+		TextColor3 = Color3.new(1, 1, 1),
+	})
+end)
+
+connect(closeButton.MouseLeave, function()
+	tween(closeButton, 0.12, {
+		BackgroundTransparency = 1,
+		TextColor3 = Theme.MutedText,
+	})
+end)
+
+connect(minimizeButton.MouseButton1Click, function()
+	UI:Hide()
+end)
+
+connect(closeButton.MouseButton1Click, function()
+	UI:Destroy()
+end)
+
+connect(UserInputService.InputBegan, function(input, processed)
+	if not processed and input.KeyCode == UI.ToggleKey then
+		UI:Toggle()
+	end
+end)
+
+local draggingWindow = false
+local dragStart
+local startPosition
+
+connect(topbar.InputBegan, function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+		draggingWindow = true
+		dragStart = input.Position
+		startPosition = window.Position
+	end
+end)
+
+connect(UserInputService.InputChanged, function(input)
+	if not draggingWindow or not menuOpen then
+		return
+	end
+
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch then
+		local delta = input.Position - dragStart
+		window.Position = UDim2.new(
+			startPosition.X.Scale,
+			startPosition.X.Offset + delta.X,
+			startPosition.Y.Scale,
+			startPosition.Y.Offset + delta.Y
+		)
+		windowPosition = window.Position
+	end
+end)
+
+connect(UserInputService.InputEnded, function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+		draggingWindow = false
+		windowPosition = window.Position
+	end
+end)
+
+--[=[
+========================================================================
+ADD YOUR CATEGORIES AND CONTROLS BELOW
+========================================================================
+
+Copy the lines you need below this example, before the final `return UI`.
+
+local mainCategory = UI:AddCategory("Main")
+
+local playerSection = mainCategory:AddSection("Player", "Left")
+
+playerSection:AddLabel("Any description can be placed here")
+
+playerSection:AddButton("My Button", function()
+	print("Button clicked")
+end)
+
+local myToggle = playerSection:AddToggle("My Toggle", false, function(enabled)
+	print("Toggle:", enabled)
+end)
+
+local mySlider = playerSection:AddSlider("Speed", 0, 700, 16, function(value)
+	print("Speed:", value)
+end)
+
+local extraSection = mainCategory:AddSection("Extra", "Right")
+extraSection:AddButton("Second Button", function()
+	print("Second button clicked")
+end)
+
+local settingsCategory = UI:AddCategory("Settings")
+local guiSection = settingsCategory:AddSection("Interface", "Left")
+guiSection:AddToggle("Example Toggle", true, function(enabled)
+	print(enabled)
+end)
+
+-- Controls can also be changed from code:
+-- myToggle:Set(true)
+-- mySlider:Set(250)
+
+========================================================================
+]=]
+
+-- Add your real UI code here.
+
+return UI
