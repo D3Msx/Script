@@ -1,6 +1,6 @@
--- Finity-inspired GUI builder for Roblox
--- Place this LocalScript in StarterPlayer > StarterPlayerScripts.
--- The GUI starts empty. Add your own categories and controls in the marked block below.
+-- Finity-inspired GUI library for Roblox
+-- Place this ModuleScript in ReplicatedStorage and name it FinityGuiLibrary.
+-- Require it from a LocalScript, then add categories and controls through the returned UI API.
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
